@@ -18,7 +18,7 @@ def getFile(session, component, bearing_num, sample):
         str(session['_id']), component['type'], bearing_num, plane, sensor)
     path = os.path.join(dest_dir, dest_filename)
     if os.path.isfile(path):
-        print(path + " already exist, skipping")
+        # print(path + " already exist, skipping")
         return
 
     dataurl = sample['dataUrl'].lstrip('/')
@@ -41,7 +41,16 @@ def getFile(session, component, bearing_num, sample):
         )
     return
 
+
 if __name__ == '__main__':
+
+    dest_dir = "/Users/gkogan/myRepos/myGit/EVO Smart belts upper Servo Motor - DIMA109-906-871-013-M14010"
+    if not os.path.isdir(dest_dir):
+        os.makedirs(dest_dir)
+
+    dt_obj_start = dt.strptime('2019-01-01 0:0:0', '%Y-%m-%d %H:%M:%S')
+    dt_obj_end = dt_obj_start + timedelta(hours=90 * 24)
+    machine_id = 'DIMA109-906-871-013-M14010'
 
     # mongo_client = MongoClient(host=os.environ['mongo_string'])
     mongo_client = MongoClient(
@@ -54,12 +63,6 @@ if __name__ == '__main__':
 
     gcs_client = storage.Client(project="research-150008")
     bucket = gcs_client.bucket("fileserver-service-production")
-
-    dest_dir = "/Users/gkogan/Downloads/newData"
-
-    dt_obj_start = dt.strptime('2021-10-01 0:0:0', '%Y-%m-%d %H:%M:%S')
-    dt_obj_end = dt_obj_start + timedelta(hours=6 * 24)
-    machine_id = '6022c7d2dbf9880001a364e9'
 
     data = list(
         mongo_db.sessions.find(
@@ -96,7 +99,7 @@ if __name__ == '__main__':
     #     for sample in bearing.get('samples', [])
     # ]
 
-    with Pool(processes=100) as pool:
+    with Pool(processes=200) as pool:
         multiple_results = [
             pool.apply_async(getFile, args=(session, component, bearing_num, sample))
             for session in session_data
@@ -105,6 +108,3 @@ if __name__ == '__main__':
             for sample in bearing.get('samples', [])
         ]
         [res.get() for res in multiple_results]
-
-
-

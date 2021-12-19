@@ -36,21 +36,22 @@ def getFile(session, component, bearing_num, sample):
         )
     except:
         print(
-            "Failed downloading session {} {} bearing {} plane {} {} sample ({})".format(
+            "Failed downloading session {} {} bearing {} plane {} {} sample ({}); Trying again".format(
                 str(session['_id']), component['type'], bearing_num, plane, sensor, dataurl)
         )
+        getFile(session, component, bearing_num, sample)
     return
 
 
 if __name__ == '__main__':
 
-    dest_dir = "/Users/gkogan/myRepos/myGit/EVO Smart belts upper Servo Motor - DIMA109-906-871-013-M14010"
+    dt_obj_start = dt.strptime('2021-12-18 0:0:0', '%Y-%m-%d %H:%M:%S')
+    dt_obj_end = dt_obj_start + timedelta(hours=1 * 24)
+    machine_id = '60f5e7b1502edc0001230701'
+
+    dest_dir = "/Users/gkogan/myRepos/myGit/" + machine_id
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
-
-    dt_obj_start = dt.strptime('2019-01-01 0:0:0', '%Y-%m-%d %H:%M:%S')
-    dt_obj_end = dt_obj_start + timedelta(hours=90 * 24)
-    machine_id = 'DIMA109-906-871-013-M14010'
 
     # mongo_client = MongoClient(host=os.environ['mongo_string'])
     mongo_client = MongoClient(
@@ -99,7 +100,7 @@ if __name__ == '__main__':
     #     for sample in bearing.get('samples', [])
     # ]
 
-    with Pool(processes=200) as pool:
+    with Pool(processes=500) as pool:
         multiple_results = [
             pool.apply_async(getFile, args=(session, component, bearing_num, sample))
             for session in session_data

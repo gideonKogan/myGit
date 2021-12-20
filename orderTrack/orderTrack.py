@@ -5,7 +5,7 @@ from scipy.fft import fft, fftfreq, next_fast_len
 from scipy.interpolate import interp1d
 
 
-def getSpeed(xMagnetic, fs, b=firwin(9, 0.1), isPlot=False):
+def getSpeed(xMagnetic, fs, b=firwin(9, 0.1), isPlot=False, figsize=[15, 5]):
     # this function implements the speed estimation based on phase zero crossing and
     # low-pass filtering of the estimated speed
 
@@ -28,13 +28,13 @@ def getSpeed(xMagnetic, fs, b=firwin(9, 0.1), isPlot=False):
     filtSpeed = filtfilt(b, 1, speed, padtype='even')
 
     if isPlot:
-        plt.figure(figsize=[15, 5])
+        plt.figure(figsize=figsize)
         plt.plot(speedTime, speed)
         plt.plot(speedTime, filtSpeed)
         plt.legend(['Gross speed estimation', 'Filtered speed estimation'])
         plt.xlabel('Time [sec]')
         plt.ylabel('Shaft speed [Cycles / second]')
-        plt.plot()
+        plt.grid()
         plt.show()
 
     return filtSpeed, speedTime
@@ -79,9 +79,9 @@ def getTestCase():
     additionalSpeed = 2  # cycles / sec
 
     t = np.arange(0, T, 1 / fs)
-    speedVarPhase = t * 2 * np.pi / (T)
+    speedVarPhase = t * 2 * np.pi / T
     speedVariation = (1 - np.cos(speedVarPhase)) * 0.5
-    speed = meanSpeed + additionalSpeed * speedVariation # cycles / sec
+    speed = meanSpeed + additionalSpeed * speedVariation  # cycles / sec
     phase = np.cumsum(speed) / fs
     xMagnetic = np.sin(phase * 2 * np.pi)
     res = {
@@ -119,7 +119,7 @@ def testOrderTrack():
     f = f[positiveCond]
     dft = dft[positiveCond]
     dft = np.abs(dft)
-    err = np.abs(expectedDFT_Amp- dft[np.argmin(np.abs(f - expectedShaftSpeed))])
+    err = np.abs(expectedDFT_Amp - dft[np.argmin(np.abs(f - expectedShaftSpeed))])
     assert (err < 0.0005)
 
 

@@ -112,7 +112,7 @@ def orderTrack(x, t, speed, speedTime):
     resampledX = np.squeeze(resampledX)
     x = np.squeeze(x)
 
-    return resampledPhase, resampledX, t, phase, interpSpeed, x
+    return resampledX, resampledPhase, t, phase, interpSpeed, x
 
 
 def getTestCase():
@@ -124,7 +124,7 @@ def getTestCase():
     # sampling time [seconds]
     T = 4
     # nominal speed - cycles / sec
-    meanSpeed = 10
+    nominalSpeed = 10
     # maximal additional speed [cycles / sec]
     additionalSpeed = 2
 
@@ -135,7 +135,7 @@ def getTestCase():
     # additional speed function
     speedVariation = (1 - np.cos(speedVarPhase)) * 0.5
     # speed vector
-    speed = meanSpeed + additionalSpeed * speedVariation
+    speed = nominalSpeed + additionalSpeed * speedVariation
     # shaft phase by integration of the shaft speed [cycles]
     phase = np.cumsum(speed) / fs
     # simulation of the magnetic flux
@@ -182,7 +182,7 @@ def testOrderTrack():
     # get the speed vector from the magnetic flux signal
     speedEstimated, timeEstimated = getSpeed(params['xMagnetic'], params['fs'])
     # order tracking - resampling from the time domain to the shaft phase domain
-    resampledPhase, resampledMagnetic, t, phase, interpSpeed, x = orderTrack(
+    resampledMagnetic, resampledPhase, t, phase, interpSpeed, x = orderTrack(
         params['xMagnetic'], params['time'], speedEstimated, timeEstimated
     )
 

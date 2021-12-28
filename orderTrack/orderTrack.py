@@ -5,7 +5,7 @@ from scipy.fft import fft, fftfreq, next_fast_len
 from scipy.interpolate import interp1d
 
 
-def getSpeed(xMagnetic, fs, maxSpeed=200, b=firwin(9, 0.1), isPlot=False, figsize=[15, 5]):
+def getSpeed(xMagnetic, fs, maxSpeed=200, b=firwin(9, 0.1), maxValidSpeedDiff=3, isPlot=False, figsize=[15, 5]):
     # Implementation of the speed estimation, based on phase zero crossing and low-pass filtering of the estimated
     # speed. Assumptions:
     # 1. The speed is stable at the edges of the section.
@@ -42,7 +42,11 @@ def getSpeed(xMagnetic, fs, maxSpeed=200, b=firwin(9, 0.1), isPlot=False, figsiz
     # estimation of the speed
     speed = fs / np.diff(crossLocs) / 2
     # due to the presence of higher harmonics in the signal, we have to filter the estimated speed.
-    filtSpeed = filtfilt(b, 1, speed, padtype='even')
+    if speed.shape[0] > 27:
+        filtSpeed = filtfilt(b, 1, speed, padtype='even')
+    else:
+        return None, None
+
 
     if isPlot:
         plt.figure(figsize=figsize)
@@ -53,6 +57,9 @@ def getSpeed(xMagnetic, fs, maxSpeed=200, b=firwin(9, 0.1), isPlot=False, figsiz
         plt.ylabel('Shaft speed [Cycles / second]')
         plt.grid()
         plt.show()
+    
+    if np.any(np.abs(speed - filtSpeed) > maxValidSpeedDiff):
+        return None, None
 
     return filtSpeed, speedTime
 
@@ -75,8 +82,12 @@ def orderTrack(x, t, speed, speedTime):
     # interpSpeed - numpy vector speed interpolated to the trimmed time vector - t
     # x - trimmed signal for the interpolation
 
+    if (speed is None) or (speedTime is None):
+        return None, None, None, None, None, None
+
     # setting the dimensions of x
     x = np.atleast_2d(x)
+
     if (x.shape[1] > x.shape[0]):
         x = x.T
 

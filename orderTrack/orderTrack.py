@@ -1,11 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import firwin, filtfilt
+from scipy.signal import firwin, filtfilt, sosfiltfilt, ellip
 from scipy.fft import fft, fftfreq, next_fast_len
 from scipy.interpolate import interp1d
+from scipy.ndimage.filters import uniform_filter1d
 
 
-def getSpeed(xMagnetic, fs, maxSpeed=200, b=firwin(9, 0.1), maxValidSpeedDiff=3, isPlot=False, figsize=[15, 5]):
+def getSpeed(xMagnetic, fs, maxSpeed=200, b=firwin(9, 0.3), maxValidSpeedDiff=0.2, isPlot=False, figsize=[15, 5]):
     # Implementation of the speed estimation, based on phase zero crossing and low-pass filtering of the estimated
     # speed. Assumptions:
     # 1. The speed is stable at the edges of the section.
@@ -26,8 +27,17 @@ def getSpeed(xMagnetic, fs, maxSpeed=200, b=firwin(9, 0.1), maxValidSpeedDiff=3,
     # Further improvements should include elimination of the assumption of the stationary speed at the edges.
     # Continuous operation assumption might be handled by thresholding of abs(diff(rollingMax(filtSpeed-speed)))
 
+    sos = ellip(6, 1, 60, 100, btype='lowpass', output='sos', fs=fs)
+
+    # correction for the first sample deviation
+    xMagnetic = xMagnetic[1:]
+    xMagnetic = sosfiltfilt(sos, xMagnetic)
+    xMagnetic -=uniform_filter1d(xMagnetic, np.ceil(fs / 10).astype(int))
+
     # detection of the zero crossing of the magnetic flux signal
     crossLocs = np.where(np.diff(np.sign(xMagnetic - np.median(xMagnetic))))[0]
+    # correction for the first sample deviation
+    crossLocs += 1
     # minimal distance between two zero crossings
     minCrossDist = int(fs / maxSpeed / 2)
     # avoiding faulty detection of crossing due to noise
@@ -49,6 +59,14 @@ def getSpeed(xMagnetic, fs, maxSpeed=200, b=firwin(9, 0.1), maxValidSpeedDiff=3,
 
 
     if isPlot:
+        tMagnetic = np.arange(xMagnetic.shape[0]) / fs
+        plt.figure(figsize=figsize)
+        plt.plot(tMagnetic, xMagnetic)
+        plt.xlabel('Time [sec]')
+        plt.ylabel('Magnetic flux')
+        plt.grid()
+        plt.show()
+
         plt.figure(figsize=figsize)
         plt.plot(speedTime, speed)
         plt.plot(speedTime, filtSpeed)
@@ -58,7 +76,7 @@ def getSpeed(xMagnetic, fs, maxSpeed=200, b=firwin(9, 0.1), maxValidSpeedDiff=3,
         plt.grid()
         plt.show()
     
-    if np.any(np.abs(speed - filtSpeed) > maxValidSpeedDiff):
+    if np.any(np.abs(speed - filtSpeed) / filtSpeed > maxValidSpeedDiff):
         return None, None
 
     return filtSpeed, speedTime
@@ -109,7 +127,7 @@ def orderTrack(x, t, speed, speedTime):
     # avoiding aliasing by sampling the with phase increments at least as small as previously
     minDphase = np.min(speed) * (t[1] - t[0])
     # Forcing Fourier domain aggregation points at round shaft speed orders
-    roundPhase = np.round(phase[-1])
+    roundPhase = np.floor(phase[-1])
     # fast FFT calculation
     dPhase = roundPhase / next_fast_len(np.ceil(roundPhase / minDphase).astype(int))
 
